@@ -9,26 +9,81 @@
 #include <SOIL/SOIL.h>
 #include "glm/ext.hpp"
 
+glm::vec3 cameraPos   = glm::vec3(0.0f, 1.0f,  3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+
+
+GLfloat deltaTime = 0.0f;   // Время, прошедшее между последним и текущим кадром
+GLfloat lastFrame = 0.0f;   // Время вывода последнего кадра
+
 static const GLsizei WIDTH = 640, HEIGHT = 480; //размеры окна
-GLfloat mixValue = 0.2f;
+bool keys[1024];
+GLfloat yaw   = -90.0f; // Yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right (due to how Eular angles work) so we initially rotate a bit to the left.
+GLfloat pitch =   0.0f;
+GLfloat lastX =  WIDTH  / 2.0;
+GLfloat lastY =  HEIGHT / 2.0;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
-    // Change value of uniform with arrow keys (sets amount of textre mix)
-    if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+
+    if(action == GLFW_PRESS)
+        keys[key] = true;
+    else if(action == GLFW_RELEASE)
+        keys[key] = false;
+
+}
+
+void do_movement()
+{
+  // Camera controls
+    GLfloat cameraSpeed = 5.0f * deltaTime;
+    if(keys[GLFW_KEY_W])
+        cameraPos += cameraSpeed * cameraFront;
+    if(keys[GLFW_KEY_S])
+        cameraPos -= cameraSpeed * cameraFront;
+    if(keys[GLFW_KEY_A])
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if(keys[GLFW_KEY_D])
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+}
+
+
+bool firstMouse = true;
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (firstMouse)
     {
-        mixValue += 0.1f;
-        if (mixValue >= 1.0f)
-            mixValue = 1.0f;
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
     }
-    if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-    {
-        mixValue -= 0.1f;
-        if (mixValue <= 0.0f)
-            mixValue = 0.0f;
-    }
+
+    GLfloat xoffset = xpos - lastX;
+    GLfloat yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to left
+    lastX = xpos;
+    lastY = ypos;
+
+    GLfloat sensitivity = 0.05; // Change this value to your liking
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw   += xoffset;
+    pitch += yoffset;
+
+    // Make sure that when pitch is out of bounds, screen doesn't get flipped
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
 }
 
 int initGL()
@@ -77,6 +132,9 @@ int main(int argc, char** argv)
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     glfwSetKeyCallback(window, key_callback);
 
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
+
     if(initGL() != 0) 
         return -1;
 
@@ -92,13 +150,29 @@ int main(int argc, char** argv)
     shaders[GL_FRAGMENT_SHADER] = "fragment.glsl";
     ShaderProgram program(shaders); GL_CHECK_ERRORS;
 
+    std::unordered_map<GLenum, std::string> planeshaders;
+    shaders[GL_VERTEX_SHADER]   = "planevertex.glsl";
+    shaders[GL_FRAGMENT_SHADER] = "planefragment.glsl";
+    ShaderProgram planeprogram(shaders); GL_CHECK_ERRORS;
+
+
+    
+    std::unordered_map<GLenum, std::string> tetrahedronshaders;
+    shaders[GL_VERTEX_SHADER]   = "tetrahedronvertex.glsl";
+    shaders[GL_FRAGMENT_SHADER] = "tetrahedronfragment.glsl";
+    ShaderProgram tetrahedronprogram(shaders); GL_CHECK_ERRORS
+    
+
     glfwSwapInterval(1); // force 60 frames per second
 
     //Создаем и загружаем геометрию поверхности
     //
     GLuint g_vertexBufferObject;
     GLuint g_vertexArrayObject;
-    GLuint EBO;
+    GLuint planeVBO;
+    GLuint planeVAO;
+    GLuint tetrahedronVBO;
+    GLuint tetrahedronVAO;
     {
         float vertices[] = {
             -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -144,6 +218,37 @@ int main(int argc, char** argv)
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
         };  
 
+        float plane[] = {
+            -0.5f, -0.5f, 0.0f,      0.0f, 0.0f,
+            -0.5f, 0.5f, 0.0f,      0.0f, 1.0f,
+            0.5f, -0.5f, 0.0f,      1.0f, 0.0f,
+            -0.5f, 0.5f, 0.0f,       0.0f, 1.0f,
+            0.5f, -0.5f, 0.0f,      1.0f, 0.0f,
+            0.5f, 0.5f, 0.0f,      1.0f, 1.0f
+
+        };
+        float a = 1;
+        float tetrahedron[] = { 
+            -0.5f, -0.5f, 0.0f,
+            -0.5f, 0.5f, 0.0f,
+            0.5f, -0.5f, 0.0f,
+
+            -0.5f, -0.5f, 0.0f,
+            -0.5f, 0.5f, 0.0f,
+            -0.5f, 0.5f, 0.5f,
+
+            -0.5f, 0.5f, 0.0f,
+            0.5f, -0.5f, 0.0f,
+            -0.5f, 0.5f, 0.5f,
+
+            -0.5f, -0.5f, 0.0f,
+            0.5f, -0.5f, 0.0f,
+            -0.5f, 0.5f, 0.5f,
+
+        };
+
+        
+
         glGenVertexArrays(1, &g_vertexArrayObject);                                                    GL_CHECK_ERRORS;
         glBindVertexArray(g_vertexArrayObject);                                                        GL_CHECK_ERRORS;
         
@@ -161,20 +266,46 @@ int main(int argc, char** argv)
         glVertexAttribPointer(2, 2, GL_FLOAT,GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
         glEnableVertexAttribArray(2);  
         glBindVertexArray(0);
+
+
+        glGenVertexArrays(1, &planeVAO);                                                    GL_CHECK_ERRORS;
+        glBindVertexArray(planeVAO);                                                        GL_CHECK_ERRORS;
+        
+
+        glGenBuffers(1, &planeVBO);                                                        GL_CHECK_ERRORS;
+        glBindBuffer(GL_ARRAY_BUFFER, planeVBO);                                           GL_CHECK_ERRORS;
+        glBufferData(GL_ARRAY_BUFFER, sizeof(plane), plane, GL_STATIC_DRAW);  GL_CHECK_ERRORS;
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+        glEnableVertexAttribArray(0);
+        // Атрибут с цветом
+        //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3* sizeof(GLfloat)));
+        //glEnableVertexAttribArray(1);
+
+        glVertexAttribPointer(2, 2, GL_FLOAT,GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+        glEnableVertexAttribArray(2);  
+        glBindVertexArray(0);
+
+        //tetrahedron
+        glGenVertexArrays(1, &tetrahedronVAO);                                                    GL_CHECK_ERRORS;
+        glBindVertexArray(tetrahedronVAO);                                                        GL_CHECK_ERRORS;
+        
+        glGenBuffers(1, &tetrahedronVBO);                                                        GL_CHECK_ERRORS;
+        glBindBuffer(GL_ARRAY_BUFFER, tetrahedronVBO);                                           GL_CHECK_ERRORS;
+        glBufferData(GL_ARRAY_BUFFER, sizeof(tetrahedron), tetrahedron, GL_STATIC_DRAW);  GL_CHECK_ERRORS;
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindVertexArray(0);
+
     }
 
 
     glm::vec3 cubePositions[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f), 
-        glm::vec3( 2.0f,  5.0f, -15.0f), 
-        glm::vec3(-1.5f, -2.2f, -2.5f),  
-        glm::vec3(-3.8f, -2.0f, -12.3f),  
-        glm::vec3( 2.4f, -0.4f, -3.5f),  
-        glm::vec3(-1.7f,  3.0f, -7.5f),  
-        glm::vec3( 1.3f, -2.0f, -2.5f),  
-        glm::vec3( 1.5f,  2.0f, -2.5f), 
-        glm::vec3( 1.5f,  0.2f, -1.5f), 
-        glm::vec3(-1.3f,  1.0f, -1.5f)  
+        glm::vec3( -1.0f,  0.5f,  1.0f), 
+        glm::vec3( 2.0f,  0.5f, 0.0f), 
+
     };
 
     GLuint texture1;
@@ -199,9 +330,9 @@ int main(int argc, char** argv)
     glBindTexture(GL_TEXTURE_2D, 0);
 
 
-    GLuint texture2;
-    glGenTextures(1, &texture2);
-    glBindTexture(GL_TEXTURE_2D, texture2);
+    GLuint texture3;
+    glGenTextures(1, &texture3);
+    glBindTexture(GL_TEXTURE_2D, texture3);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -209,7 +340,7 @@ int main(int argc, char** argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  // NOTE the GL_NEAREST Here! 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);  // NOTE the GL_NEAREST Here! 
     
-    image = SOIL_load_image("awesomeface.png", &width, &height, 0, SOIL_LOAD_RGB);
+    image = SOIL_load_image("plane.jpg", &width, &height, 0, SOIL_LOAD_RGB);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -231,8 +362,10 @@ int main(int argc, char** argv)
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-
-
+        do_movement();
+        GLfloat currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
 
 
 
@@ -261,44 +394,89 @@ int main(int argc, char** argv)
         glBindTexture(GL_TEXTURE_2D, texture1);
         program.SetUniform("ourTexture1", 0);
 
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
-        program.SetUniform("ourTexture2", 1);
-
-
         GLfloat timeValue = glfwGetTime();
-        //program.SetUniform("time", timeValue);
-        program.SetUniform("mixValue", mixValue);
 
         glm::mat4 model(1);
-        model = glm::rotate(model, (GLfloat)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f)); // glm::radians
+        //model = glm::rotate(model, (GLfloat)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f)); // glm::radians
+        //program.SetUniform("model", model);
 
-        glm::mat4 view(1);
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        GLfloat radius = 2.0f;
+        GLfloat camX = 0;
+        GLfloat camZ = radius + 1;
+        GLfloat camY = radius;
+        glm::mat4 view;
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+        program.SetUniform("view", view);
 
         glm::mat4 projection(1);
         projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
+        program.SetUniform("projection", projection);
 
+
+
+        //1 cube
+        model = glm::scale(glm::mat4(1), glm::vec3(0.4f, 0.4f, 0.4f));
+        model = glm::translate(model, cubePositions[0]);
+
+
+        program.SetUniform("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        
+        //2 cube
+        model = glm::scale(glm::mat4(1), glm::vec3(0.4f, 0.7f, 1.4f));
+        model = glm::translate(model, cubePositions[1]);
+
+
+        program.SetUniform("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         
 
-
-        for(GLuint i = 0; i < 10; i++)
-        {
-            glm::mat4 model(1);
-            model = glm::translate(model, cubePositions[i]);
-            GLfloat angle = glm::radians(20.0f) * (i + 1)  * ((GLfloat)glfwGetTime() * (i % 3 == 0) + 1 * (i % 3 != 0)); 
-            model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-            
-            glm::mat4 transform(1);
-            transform = projection * view * model;
-
-            program.SetUniform("transform", transform);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
-
         glBindVertexArray(0);
-
         program.StopUseShader();
+
+        //plane
+        planeprogram.StartUseShader(); GL_CHECK_ERRORS;
+
+        glBindVertexArray(planeVAO);
+
+        
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture3);
+        planeprogram.SetUniform("ourTexture3", 0);
+        
+
+        model = glm::scale(glm::mat4(1), glm::vec3(6.0f, 20.0f, 4.0f));
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        planeprogram.SetUniform("model", model);
+
+        planeprogram.SetUniform("view", view);
+
+        projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
+        planeprogram.SetUniform("projection", projection);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        planeprogram.StopUseShader();
+
+
+        //tetrahedron
+        tetrahedronprogram.StartUseShader();
+
+        glBindVertexArray(tetrahedronVAO);
+
+        model = glm::scale(glm::mat4(1), glm::vec3(1.f, 1.f, 1.f));
+        model = glm::translate(model, glm::vec3(0.0f, 1.f, 1.f));
+        tetrahedronprogram.SetUniform("model", model);
+
+
+        tetrahedronprogram.SetUniform("view", view);
+
+        projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
+        tetrahedronprogram.SetUniform("projection", projection);
+        glDrawArrays(GL_TRIANGLES, 0, 12);
+
+        tetrahedronprogram.StopUseShader();
+
 
         glfwSwapBuffers(window); 
     }
@@ -306,8 +484,12 @@ int main(int argc, char** argv)
     //очищаем vboи vao перед закрытием программы
     //
     glDeleteVertexArrays(1, &g_vertexArrayObject);
+    glDeleteVertexArrays(1, &planeVAO);
+    glDeleteVertexArrays(1, &tetrahedronVAO);
     glDeleteBuffers(1,      &g_vertexBufferObject);
-    glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1,      &planeVBO);
+    glDeleteBuffers(1,      &tetrahedronVBO);
+    
 
     glfwTerminate();
     return 0;
