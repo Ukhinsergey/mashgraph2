@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 #include "common.h"
-
+#include "glm/ext.hpp"
 
 class ShaderProgram
 {
@@ -33,6 +33,8 @@ public:
   void SetUniform(const std::string &location, int value) const;
 
   void SetUniform(const std::string &location, unsigned int value) const;
+
+  void SetUniform(const std::string &location, glm::mat4 &a_mat) const;
 
 private:
   static GLuint LoadShaderObject(GLenum type, const std::string &filename);

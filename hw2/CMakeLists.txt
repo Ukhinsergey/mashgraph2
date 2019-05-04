@@ -11,6 +11,7 @@ set(SOURCE_FILES
     ShaderProgram.cpp)
 
 set(ADDITIONAL_INCLUDE_DIRS
+        dependencies/include/SOIL
         dependencies/include/GLAD)
 set(ADDITIONAL_LIBRARY_DIRS
         dependencies/lib)   
@@ -26,7 +27,11 @@ if(WIN32)
   link_directories(${ADDITIONAL_LIBRARY_DIRS})
 else()
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+  set(ADDITIONAL_INCLUDE_DIRS 
+        ${ADDITIONAL_INCLUDE_DIRS}
+        dependencies/include)
   find_package(glfw3 REQUIRED)
+  link_directories(${ADDITIONAL_LIBRARY_DIRS})
 endif()
 
 include_directories(${ADDITIONAL_INCLUDE_DIRS})
@@ -45,6 +50,6 @@ if(WIN32)
   target_link_libraries(main LINK_PUBLIC ${OPENGL_gl_LIBRARY} glfw3dll)
 else()
   target_compile_options(main PRIVATE -Wnarrowing)
-  target_link_libraries(main LINK_PUBLIC ${OPENGL_gl_LIBRARY} glfw rt dl)
+  target_link_libraries(main  LINK_PUBLIC SOIL ${OPENGL_gl_LIBRARY} glfw rt dl )
 endif()
 

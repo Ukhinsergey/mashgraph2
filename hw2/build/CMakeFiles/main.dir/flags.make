@@ -7,11 +7,11 @@ C_FLAGS =   -Wnarrowing
 
 C_DEFINES = 
 
-C_INCLUDES = -I/home/serega/msu/mashgraph2/hw2/dependencies/include/GLAD -isystem /usr/local/include 
+C_INCLUDES = -I/home/serega/msu/mashgraph2/hw2/dependencies/include/SOIL -I/home/serega/msu/mashgraph2/hw2/dependencies/include/GLAD -I/home/serega/msu/mashgraph2/hw2/dependencies/include -isystem /usr/local/include 
 
 CXX_FLAGS =   -Wnarrowing -std=gnu++11
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/serega/msu/mashgraph2/hw2/dependencies/include/GLAD -isystem /usr/local/include 
+CXX_INCLUDES = -I/home/serega/msu/mashgraph2/hw2/dependencies/include/SOIL -I/home/serega/msu/mashgraph2/hw2/dependencies/include/GLAD -I/home/serega/msu/mashgraph2/hw2/dependencies/include -isystem /usr/local/include 
 
