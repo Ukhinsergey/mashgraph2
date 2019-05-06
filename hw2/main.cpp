@@ -227,23 +227,21 @@ int main(int argc, char** argv)
             0.5f, 0.5f, 0.0f,      1.0f, 1.0f
 
         };
-        float a = 1;
+        float cube_root = std::pow(3, 1.0 / 3.0);
+        float sqrt_2 = std::sqrt(2);
         float tetrahedron[] = { 
-            -0.5f, -0.5f, 0.0f,
-            -0.5f, 0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f,
-
-            -0.5f, -0.5f, 0.0f,
-            -0.5f, 0.5f, 0.0f,
-            -0.5f, 0.5f, 0.5f,
-
-            -0.5f, 0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f,
-            -0.5f, 0.5f, 0.5f,
-
-            -0.5f, -0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f,
-            -0.5f, 0.5f, 0.5f,
+            1.0, 0.0,0.0,                           0.0, -1.0, 0.0,                                                         0.0, 1.0,
+            -1.0 / 2.0, 0.0, cube_root / 2.0,       0.0, -1.0, 0.0,                                                         1.0, 0.5,
+            -1.0 / 2.0, 0.0, -cube_root / 2.0,      0.0, -1.0, 0.0,                                                         0.0, 0.0,
+            -1.0 / 2.0, 0.0,  cube_root / 2.0,      -2.0 * sqrt_2 / 3.0, 1.0 / 3.0, 0.0,                                    0.0, 1.0,
+            0.0, sqrt_2, 0.0,                       -2.0 * sqrt_2 / 3.0, 1.0 / 3.0, 0.0,                                    1.0, 0.5,
+            -1.0 / 2.0,    0.0, -cube_root / 2.0,   -2.0 * sqrt_2 / 3.0, 1.0 / 3.0, 0.0,                                    0.0, 0.0,
+            1.0, 0.0, 0.0,                          sqrt_2 / 3.0, 1.0 / 3.0, sqrt_2 / cube_root,                            0.0, 1.0,
+            0.0, sqrt_2,0.0,                        sqrt_2 / 3.0, 1.0 / 3.0, sqrt_2 / cube_root,                            1.0, 0.5,
+            -1.0 / 2.0, 0.0,                        cube_root / 2.0, sqrt_2 / 3.0, 1.0 / 3.0, sqrt_2 / cube_root,           0.0, 0.0,
+            -1.0 / 2.0, 0.0,                        -cube_root / 2.0, sqrt_2 / 3.0, 1.0 / 3.0, -sqrt_2 / cube_root,         0.0, 1.0,
+            0.0, sqrt_2, 0.0,                       sqrt_2 / 3.0, 1.0 / 3.0, -sqrt_2 / cube_root,                           1.0, 0.5,
+            1.0, 0.0, 0.0,                          sqrt_2 / 3.0, 1.0 / 3.0, -sqrt_2 / cube_root,                           0.0, 0.0,
 
         };
 
@@ -294,8 +292,11 @@ int main(int argc, char** argv)
         glBindBuffer(GL_ARRAY_BUFFER, tetrahedronVBO);                                           GL_CHECK_ERRORS;
         glBufferData(GL_ARRAY_BUFFER, sizeof(tetrahedron), tetrahedron, GL_STATIC_DRAW);  GL_CHECK_ERRORS;
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
         glEnableVertexAttribArray(0);
+
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)3);
+        glEnableVertexAttribArray(1);
 
         glBindVertexArray(0);
 
@@ -303,7 +304,7 @@ int main(int argc, char** argv)
 
 
     glm::vec3 cubePositions[] = {
-        glm::vec3( -1.0f,  0.5f,  1.0f), 
+        glm::vec3( -2.0f,  0.5f,  0.0f), 
         glm::vec3( 2.0f,  0.5f, 0.0f), 
 
     };
@@ -340,9 +341,9 @@ int main(int argc, char** argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  // NOTE the GL_NEAREST Here! 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);  // NOTE the GL_NEAREST Here! 
     
-    image = SOIL_load_image("plane.jpg", &width, &height, 0, SOIL_LOAD_RGB);
+    image = SOIL_load_image("plane.jpg", &width, &height, 0, SOIL_LOAD_RGBA);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     SOIL_free_image_data(image);
@@ -463,9 +464,9 @@ int main(int argc, char** argv)
         tetrahedronprogram.StartUseShader();
 
         glBindVertexArray(tetrahedronVAO);
-
-        model = glm::scale(glm::mat4(1), glm::vec3(1.f, 1.f, 1.f));
-        model = glm::translate(model, glm::vec3(0.0f, 1.f, 1.f));
+        GLfloat curtime = glfwGetTime();
+        model = glm::scale(glm::mat4(1), glm::vec3(0.3));
+        model = glm::translate(model, glm::vec3(2 * sin(5 * curtime), 0.f, 2 * cos(5 * curtime)));
         tetrahedronprogram.SetUniform("model", model);
 
 
