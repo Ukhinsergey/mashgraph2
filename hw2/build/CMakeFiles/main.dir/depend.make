@@ -375,7 +375,6 @@ CMakeFiles/main.dir/ShaderProgram.cpp.o: ../glm/vector_relational.hpp
 CMakeFiles/main.dir/main.cpp.o: ../dependencies/include/GLAD/KHR/khrplatform.h
 CMakeFiles/main.dir/main.cpp.o: ../dependencies/include/GLAD/glad/glad.h
 CMakeFiles/main.dir/main.cpp.o: ../dependencies/include/GLFW/glfw3.h
-CMakeFiles/main.dir/main.cpp.o: ../dependencies/include/SOIL/SOIL.h
 CMakeFiles/main.dir/main.cpp.o: ../ShaderProgram.h
 CMakeFiles/main.dir/main.cpp.o: ../common.h
 CMakeFiles/main.dir/main.cpp.o: ../glm/./common.hpp
@@ -740,4 +739,5 @@ CMakeFiles/main.dir/main.cpp.o: ../glm/vec3.hpp
 CMakeFiles/main.dir/main.cpp.o: ../glm/vec4.hpp
 CMakeFiles/main.dir/main.cpp.o: ../glm/vector_relational.hpp
 CMakeFiles/main.dir/main.cpp.o: ../main.cpp
+CMakeFiles/main.dir/main.cpp.o: ../stb_image.h
 

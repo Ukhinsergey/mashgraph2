@@ -376,7 +376,6 @@ CMakeFiles/main.dir/main.cpp.o
  ../dependencies/include/GLAD/KHR/khrplatform.h
  ../dependencies/include/GLAD/glad/glad.h
  ../dependencies/include/GLFW/glfw3.h
- ../dependencies/include/SOIL/SOIL.h
  /home/serega/msu/mashgraph2/hw2/ShaderProgram.h
  /home/serega/msu/mashgraph2/hw2/common.h
  /home/serega/msu/mashgraph2/hw2/glm/./common.hpp
@@ -741,3 +740,4 @@ CMakeFiles/main.dir/main.cpp.o
  /home/serega/msu/mashgraph2/hw2/glm/vec4.hpp
  /home/serega/msu/mashgraph2/hw2/glm/vector_relational.hpp
  /home/serega/msu/mashgraph2/hw2/main.cpp
+ /home/serega/msu/mashgraph2/hw2/stb_image.h

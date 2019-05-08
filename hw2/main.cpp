@@ -6,13 +6,15 @@
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
 #include <random>
-#include <SOIL/SOIL.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include "glm/ext.hpp"
 
+using namespace std;
 glm::vec3 cameraPos   = glm::vec3(0.0f, 1.0f,  3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
-
+glm::vec3 lightPos(0, 2.0f, 0.0f);
 
 GLfloat deltaTime = 0.0f;   // Время, прошедшее между последним и текущим кадром
 GLfloat lastFrame = 0.0f;   // Время вывода последнего кадра
@@ -150,18 +152,6 @@ int main(int argc, char** argv)
     shaders[GL_FRAGMENT_SHADER] = "fragment.glsl";
     ShaderProgram program(shaders); GL_CHECK_ERRORS;
 
-    std::unordered_map<GLenum, std::string> planeshaders;
-    shaders[GL_VERTEX_SHADER]   = "planevertex.glsl";
-    shaders[GL_FRAGMENT_SHADER] = "planefragment.glsl";
-    ShaderProgram planeprogram(shaders); GL_CHECK_ERRORS;
-
-
-    
-    std::unordered_map<GLenum, std::string> tetrahedronshaders;
-    shaders[GL_VERTEX_SHADER]   = "tetrahedronvertex.glsl";
-    shaders[GL_FRAGMENT_SHADER] = "tetrahedronfragment.glsl";
-    ShaderProgram tetrahedronprogram(shaders); GL_CHECK_ERRORS
-    
 
     glfwSwapInterval(1); // force 60 frames per second
 
@@ -175,61 +165,62 @@ int main(int argc, char** argv)
     GLuint tetrahedronVAO;
     {
         float vertices[] = {
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+            1.0, -1.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0,
+            -1.0, -1.0, -1.0,  0.0,  0.0, -1.0,  0.0,  1.0,
+            -1.0,  1.0, -1.0,  0.0,  0.0, -1.0,  1.0,  1.0,
+            -1.0,  1.0, -1.0,  0.0,  0.0, -1.0,  1.0,  1.0,
+             1.0,  1.0, -1.0,  0.0,  0.0, -1.0,  1.0,  0.0,
+             1.0, -1.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0,
 
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            -1.0, -1.0, 1.0,  0.0,  0.0,  1.0,  0.0,  0.0,
+             1.0, -1.0, 1.0,  0.0,  0.0,  1.0,  0.0,  1.0,
+             1.0,  1.0, 1.0,  0.0,  0.0,  1.0,  1.0,  1.0,
+             1.0,  1.0, 1.0,  0.0,  0.0,  1.0,  1.0,  1.0,
+            -1.0,  1.0, 1.0,  0.0,  0.0,  1.0,  1.0,  0.0,
+            -1.0, -1.0, 1.0,  0.0,  0.0,  1.0,  0.0,  0.0,
 
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            -1.0, -1.0, -1.0, -1.0,  0.0,  0.0,  0.0,  0.0,
+            -1.0, -1.0,  1.0, -1.0,  0.0,  0.0,  0.0,  1.0,
+            -1.0,  1.0,  1.0, -1.0,  0.0,  0.0,  1.0,  1.0,
+            -1.0,  1.0,  1.0, -1.0,  0.0,  0.0,  1.0,  1.0,
+            -1.0,  1.0, -1.0, -1.0,  0.0,  0.0,  1.0,  0.0,
+            -1.0, -1.0, -1.0, -1.0,  0.0,  0.0,  0.0,  0.0,
 
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+             1.0, -1.0,  1.0,  1.0,  0.0,  0.0,  0.0,  0.0,
+             1.0, -1.0, -1.0,  1.0,  0.0,  0.0,  0.0,  1.0,
+             1.0,  1.0, -1.0,  1.0,  0.0,  0.0,  1.0,  1.0,
+             1.0,  1.0, -1.0,  1.0,  0.0,  0.0,  1.0,  1.0,
+             1.0,  1.0,  1.0,  1.0,  0.0,  0.0,  1.0,  0.0,
+             1.0, -1.0,  1.0,  1.0,  0.0,  0.0,  0.0,  0.0,
 
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            -1.0, -1.0, -1.0,  0.0, -1.0,  0.0,  0.0,  0.0,
+             1.0, -1.0, -1.0,  0.0, -1.0,  0.0,  0.0,  1.0,
+             1.0, -1.0,  1.0,  0.0, -1.0,  0.0,  1.0,  1.0,
+             1.0, -1.0,  1.0,  0.0, -1.0,  0.0,  1.0,  1.0,
+            -1.0, -1.0,  1.0,  0.0, -1.0,  0.0,  1.0,  0.0,
+            -1.0, -1.0, -1.0,  0.0, -1.0,  0.0,  0.0,  0.0,
 
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+             1.0,  1.0, -1.0,  0.0,  1.0,  0.0,  0.0,  0.0,
+            -1.0,  1.0, -1.0,  0.0,  1.0,  0.0,  0.0,  1.0,
+            -1.0,  1.0,  1.0,  0.0,  1.0,  0.0,  1.0,  1.0,
+            -1.0,  1.0,  1.0,  0.0,  1.0,  0.0,  1.0,  1.0,
+             1.0,  1.0,  1.0,  0.0,  1.0,  0.0,  1.0,  0.0,
+             1.0,  1.0, -1.0,  0.0,  1.0,  0.0,  0.0,  0.0
         };  
 
         float plane[] = {
-            -0.5f, -0.5f, 0.0f,      0.0f, 0.0f,
-            -0.5f, 0.5f, 0.0f,      0.0f, 1.0f,
-            0.5f, -0.5f, 0.0f,      1.0f, 0.0f,
-            -0.5f, 0.5f, 0.0f,       0.0f, 1.0f,
-            0.5f, -0.5f, 0.0f,      1.0f, 0.0f,
-            0.5f, 0.5f, 0.0f,      1.0f, 1.0f
+            -1.0,  0.0,  1.0,  0.0,  1.0,  0.0,  0.0,  0.0,
+             1.0,  0.0,  1.0,  0.0,  1.0,  0.0,  0.0,  1.0,
+             1.0,  0.0, -1.0,  0.0,  1.0,  0.0,  1.0,  1.0,
+             1.0,  0.0, -1.0,  0.0,  1.0,  0.0,  1.0,  1.0,
+            -1.0,  0.0, -1.0,  0.0,  1.0,  0.0,  1.0,  0.0,
+            -1.0,  0.0,  1.0,  0.0,  1.0,  0.0,  0.0,  0.0
 
         };
         float cube_root = std::pow(3, 1.0 / 3.0);
         float sqrt_2 = std::sqrt(2);
         float tetrahedron[] = { 
+            
             1.0, 0.0,0.0,                           0.0, -1.0, 0.0,                                                         0.0, 1.0,
             -1.0 / 2.0, 0.0, cube_root / 2.0,       0.0, -1.0, 0.0,                                                         1.0, 0.5,
             -1.0 / 2.0, 0.0, -cube_root / 2.0,      0.0, -1.0, 0.0,                                                         0.0, 0.0,
@@ -238,15 +229,15 @@ int main(int argc, char** argv)
             -1.0 / 2.0,    0.0, -cube_root / 2.0,   -2.0 * sqrt_2 / 3.0, 1.0 / 3.0, 0.0,                                    0.0, 0.0,
             1.0, 0.0, 0.0,                          sqrt_2 / 3.0, 1.0 / 3.0, sqrt_2 / cube_root,                            0.0, 1.0,
             0.0, sqrt_2,0.0,                        sqrt_2 / 3.0, 1.0 / 3.0, sqrt_2 / cube_root,                            1.0, 0.5,
-            -1.0 / 2.0, 0.0,                        cube_root / 2.0, sqrt_2 / 3.0, 1.0 / 3.0, sqrt_2 / cube_root,           0.0, 0.0,
-            -1.0 / 2.0, 0.0,                        -cube_root / 2.0, sqrt_2 / 3.0, 1.0 / 3.0, -sqrt_2 / cube_root,         0.0, 1.0,
+            -1.0 / 2.0, 0.0, cube_root / 2.0,       sqrt_2 / 3.0, 1.0 / 3.0, sqrt_2 / cube_root,                            0.0, 0.0,
+            -1.0 / 2.0, 0.0, -cube_root / 2.0,      sqrt_2 / 3.0, 1.0 / 3.0, -sqrt_2 / cube_root,                           0.0, 1.0,
             0.0, sqrt_2, 0.0,                       sqrt_2 / 3.0, 1.0 / 3.0, -sqrt_2 / cube_root,                           1.0, 0.5,
             1.0, 0.0, 0.0,                          sqrt_2 / 3.0, 1.0 / 3.0, -sqrt_2 / cube_root,                           0.0, 0.0,
-
+            
         };
 
         
-
+        //cube
         glGenVertexArrays(1, &g_vertexArrayObject);                                                    GL_CHECK_ERRORS;
         glBindVertexArray(g_vertexArrayObject);                                                        GL_CHECK_ERRORS;
         
@@ -255,17 +246,16 @@ int main(int argc, char** argv)
         glBindBuffer(GL_ARRAY_BUFFER, g_vertexBufferObject);                                           GL_CHECK_ERRORS;
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);  GL_CHECK_ERRORS;
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
         glEnableVertexAttribArray(0);
-        // Атрибут с цветом
-        //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3* sizeof(GLfloat)));
-        //glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3* sizeof(GLfloat)));
+        glEnableVertexAttribArray(1);
 
-        glVertexAttribPointer(2, 2, GL_FLOAT,GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+        glVertexAttribPointer(2, 2, GL_FLOAT,GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
         glEnableVertexAttribArray(2);  
         glBindVertexArray(0);
 
-
+        //plane
         glGenVertexArrays(1, &planeVAO);                                                    GL_CHECK_ERRORS;
         glBindVertexArray(planeVAO);                                                        GL_CHECK_ERRORS;
         
@@ -274,13 +264,12 @@ int main(int argc, char** argv)
         glBindBuffer(GL_ARRAY_BUFFER, planeVBO);                                           GL_CHECK_ERRORS;
         glBufferData(GL_ARRAY_BUFFER, sizeof(plane), plane, GL_STATIC_DRAW);  GL_CHECK_ERRORS;
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
         glEnableVertexAttribArray(0);
-        // Атрибут с цветом
-        //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3* sizeof(GLfloat)));
-        //glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3* sizeof(GLfloat)));
+        glEnableVertexAttribArray(1);
 
-        glVertexAttribPointer(2, 2, GL_FLOAT,GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+        glVertexAttribPointer(2, 2, GL_FLOAT,GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
         glEnableVertexAttribArray(2);  
         glBindVertexArray(0);
 
@@ -295,8 +284,11 @@ int main(int argc, char** argv)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
         glEnableVertexAttribArray(0);
 
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)3);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
         glEnableVertexAttribArray(1);
+
+        glVertexAttribPointer(2, 2, GL_FLOAT,GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+        glEnableVertexAttribArray(2); 
 
         glBindVertexArray(0);
 
@@ -304,8 +296,8 @@ int main(int argc, char** argv)
 
 
     glm::vec3 cubePositions[] = {
-        glm::vec3( -2.0f,  0.5f,  0.0f), 
-        glm::vec3( 2.0f,  0.5f, 0.0f), 
+        glm::vec3( -6.0f,  1.0f,  0.0f), 
+        glm::vec3( 6.0f,  1.0f, 0.0f), 
 
     };
 
@@ -322,12 +314,12 @@ int main(int argc, char** argv)
     int channel;
     
     int width, height;
-    unsigned char* image = SOIL_load_image("container.png", &width, &height, &channel, SOIL_LOAD_RGBA);
-    
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+    unsigned char* image = stbi_load("container.jpg", &width, &height, &channel, 0);
+    cout << width << endl;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    SOIL_free_image_data(image);
+    stbi_image_free(image);
     glBindTexture(GL_TEXTURE_2D, 0);
 
 
@@ -341,12 +333,12 @@ int main(int argc, char** argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  // NOTE the GL_NEAREST Here! 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);  // NOTE the GL_NEAREST Here! 
     
-    image = SOIL_load_image("plane.jpg", &width, &height, 0, SOIL_LOAD_RGBA);
+    image = stbi_load("plane.jpg", &width, &height, 0, 0);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    SOIL_free_image_data(image);
+    stbi_image_free(image);
     glBindTexture(GL_TEXTURE_2D, 0);
     
     
@@ -357,6 +349,7 @@ int main(int argc, char** argv)
         std::cout << std::endl;
     }*/
     glEnable(GL_DEPTH_TEST);
+    glm::vec3 lightColor = glm::vec3(1.f, 1.f, 1.f);  
 
 
     //цикл обработки сообщений и отрисовки сцены каждый кадр
@@ -367,8 +360,10 @@ int main(int argc, char** argv)
         GLfloat currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+        GLfloat timeValue = glfwGetTime();
+        GLfloat curtime = glfwGetTime();
 
-
+        lightPos = glm::vec3(sin(curtime), 2.0, cos(curtime));
 
             //очищаем экран каждый кадр
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);              GL_CHECK_ERRORS;
@@ -376,8 +371,9 @@ int main(int argc, char** argv)
 
         program.StartUseShader();                           GL_CHECK_ERRORS;
 
-
-
+        program.SetUniform("isTetrahedron", 0);
+        program.SetUniform("lightPos", lightPos);
+        program.SetUniform("viewPos;", cameraPos);
 
         // очистка и заполнение экрана цветом
         //
@@ -395,7 +391,6 @@ int main(int argc, char** argv)
         glBindTexture(GL_TEXTURE_2D, texture1);
         program.SetUniform("ourTexture1", 0);
 
-        GLfloat timeValue = glfwGetTime();
 
         glm::mat4 model(1);
         //model = glm::rotate(model, (GLfloat)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f)); // glm::radians
@@ -417,7 +412,7 @@ int main(int argc, char** argv)
 
 
         //1 cube
-        model = glm::scale(glm::mat4(1), glm::vec3(0.4f, 0.4f, 0.4f));
+        model = glm::scale(glm::mat4(1), glm::vec3(0.2f));
         model = glm::translate(model, cubePositions[0]);
 
 
@@ -425,58 +420,65 @@ int main(int argc, char** argv)
         glDrawArrays(GL_TRIANGLES, 0, 36);
         
         //2 cube
-        model = glm::scale(glm::mat4(1), glm::vec3(0.4f, 0.7f, 1.4f));
+        model = glm::scale(glm::mat4(1), glm::vec3(0.2f, 0.35f, 0.7f));
         model = glm::translate(model, cubePositions[1]);
 
 
         program.SetUniform("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        //lightpos
+        model = glm::mat4(1.0);
+        model = glm::translate(model, lightPos);
+        model = glm::scale(model, glm::vec3(0.2f));
+        program.SetUniform("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         
 
         glBindVertexArray(0);
-        program.StopUseShader();
 
         //plane
-        planeprogram.StartUseShader(); GL_CHECK_ERRORS;
 
         glBindVertexArray(planeVAO);
 
         
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture3);
-        planeprogram.SetUniform("ourTexture3", 0);
+        program.SetUniform("ourTexture1", 0);
         
 
-        model = glm::scale(glm::mat4(1), glm::vec3(6.0f, 20.0f, 4.0f));
-        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        planeprogram.SetUniform("model", model);
+        model = glm::scale(glm::mat4(1), glm::vec3(2.6,2,2));
+        model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        program.SetUniform("model", model);
 
-        planeprogram.SetUniform("view", view);
+        program.SetUniform("view", view);
 
         projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
-        planeprogram.SetUniform("projection", projection);
+        program.SetUniform("projection", projection);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        planeprogram.StopUseShader();
 
 
         //tetrahedron
-        tetrahedronprogram.StartUseShader();
+        program.SetUniform("isTetrahedron", 1);
+        glm::vec3 objectColor = glm::vec3(1.0f, 0.5f, 0.31f);
+        program.SetUniform("objectColor", objectColor);
+        program.SetUniform("lightColor", lightColor);
+
 
         glBindVertexArray(tetrahedronVAO);
-        GLfloat curtime = glfwGetTime();
         model = glm::scale(glm::mat4(1), glm::vec3(0.3));
-        model = glm::translate(model, glm::vec3(2 * sin(5 * curtime), 0.f, 2 * cos(5 * curtime)));
-        tetrahedronprogram.SetUniform("model", model);
+        model = glm::translate(model, glm::vec3(2 * sin(5 * curtime), 1.2f, 2 * cos(2 * curtime)));
+        
+        program.SetUniform("model", model);
 
 
-        tetrahedronprogram.SetUniform("view", view);
+        program.SetUniform("view", view);
 
         projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
-        tetrahedronprogram.SetUniform("projection", projection);
+        program.SetUniform("projection", projection);
         glDrawArrays(GL_TRIANGLES, 0, 12);
 
-        tetrahedronprogram.StopUseShader();
+        program.StopUseShader();
 
 
         glfwSwapBuffers(window); 
