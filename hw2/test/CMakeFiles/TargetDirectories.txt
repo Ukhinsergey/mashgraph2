@@ -1,3 +1,0 @@
-/home/serega/msu/mashgraph2/hw2/test/CMakeFiles/rebuild_cache.dir
-/home/serega/msu/mashgraph2/hw2/test/CMakeFiles/main.dir
-/home/serega/msu/mashgraph2/hw2/test/CMakeFiles/edit_cache.dir
