@@ -6,7 +6,6 @@
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
 #include <random>
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "glm/ext.hpp"
 
@@ -14,10 +13,13 @@ using namespace std;
 glm::vec3 cameraPos   = glm::vec3(0.0f, 1.0f,  3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
-glm::vec3 lightPos(0, 2.0f, 0.0f);
+glm::vec3 lightPos(3.0f, 3.0f, 0.0f);
 
 GLfloat deltaTime = 0.0f;   // Время, прошедшее между последним и текущим кадром
 GLfloat lastFrame = 0.0f;   // Время вывода последнего кадра
+
+
+GLint depthmap = 2;
 
 static const GLsizei WIDTH = 640, HEIGHT = 480; //размеры окна
 bool keys[1024];
@@ -35,6 +37,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         keys[key] = true;
     else if(action == GLFW_RELEASE)
         keys[key] = false;
+
+    if (key == GLFW_KEY_1 ){
+        depthmap = 2;
+    }
+    if (key == GLFW_KEY_2 ){
+        depthmap = 1;
+    }
 
 }
 
@@ -152,6 +161,14 @@ int main(int argc, char** argv)
     shaders[GL_FRAGMENT_SHADER] = "fragment.glsl";
     ShaderProgram program(shaders); GL_CHECK_ERRORS;
 
+    shaders[GL_VERTEX_SHADER]   = "depthvertex.glsl";
+    shaders[GL_FRAGMENT_SHADER] = "depthfragment.glsl";
+    ShaderProgram depthprogram(shaders); GL_CHECK_ERRORS;
+
+
+    shaders[GL_VERTEX_SHADER]   = "showDepthvertex.glsl";
+    shaders[GL_FRAGMENT_SHADER] = "showDepthfragment.glsl";
+    ShaderProgram showDepthprogram(shaders); GL_CHECK_ERRORS;
 
     glfwSwapInterval(1); // force 60 frames per second
 
@@ -163,6 +180,7 @@ int main(int argc, char** argv)
     GLuint planeVAO;
     GLuint tetrahedronVBO;
     GLuint tetrahedronVAO;
+
     {
         float vertices[] = {
             1.0, -1.0, -1.0,  0.0,  0.0, -1.0,  0.0,  0.0,
@@ -292,7 +310,59 @@ int main(int argc, char** argv)
 
         glBindVertexArray(0);
 
+
+
+
     }
+
+    //test
+     float quad_vertices[] = {
+
+        -1.0, -1.0, 0.0, 0.0, 0.0,
+         1.0, -1.0, 0.0, 1.0, 0.0,
+        -1.0,  1.0, 0.0, 0.0, 1.0,
+        -1.0,  1.0, 0.0, 0.0, 1.0,
+         1.0, -1.0, 0.0, 1.0, 0.0,
+         1.0,  1.0, 0.0, 1.0, 1.0
+    };
+    unsigned int quadVBO, quadVAO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
+    glBindVertexArray(quadVAO);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+    glBindVertexArray(0);
+
+    //depthmap
+    unsigned int depthMapFBO;
+    glGenFramebuffers(1, &depthMapFBO);
+    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+
+    unsigned int depthMap;
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+       SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+    
+    
+
+
 
 
     glm::vec3 cubePositions[] = {
@@ -349,7 +419,6 @@ int main(int argc, char** argv)
         std::cout << std::endl;
     }*/
     glEnable(GL_DEPTH_TEST);
-    glm::vec3 lightColor = glm::vec3(1.f, 1.f, 1.f);  
 
 
     //цикл обработки сообщений и отрисовки сцены каждый кадр
@@ -363,122 +432,122 @@ int main(int argc, char** argv)
         GLfloat timeValue = glfwGetTime();
         GLfloat curtime = glfwGetTime();
 
-        lightPos = glm::vec3(sin(curtime), 2.0, cos(curtime));
 
             //очищаем экран каждый кадр
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);              GL_CHECK_ERRORS;
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); GL_CHECK_ERRORS;
 
-        program.StartUseShader();                           GL_CHECK_ERRORS;
 
-        program.SetUniform("isTetrahedron", 0);
-        program.SetUniform("lightPos", lightPos);
-        program.SetUniform("viewPos;", cameraPos);
-
-        // очистка и заполнение экрана цветом
-        //
-        glViewport  (0, 0, WIDTH, HEIGHT);
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear     (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-        // draw call
-        //
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glBindVertexArray(g_vertexArrayObject); GL_CHECK_ERRORS;
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        program.SetUniform("ourTexture1", 0);
+        //float near_plane = 1.0f, far_plane = 7.5f;
+        glm::mat4 lightProjection = glm::ortho(-3.0f, 3.0f, -3.0f, 3.0f, 0.2f, 7.0f);
 
 
-        glm::mat4 model(1);
-        //model = glm::rotate(model, (GLfloat)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f)); // glm::radians
-        //program.SetUniform("model", model);
+        glm::mat4 lightView = glm::lookAt(glm::vec3(3.0f, 3.0f, 0.0f),
+                                  glm::vec3( 0.0f, 0.0f,  0.0f),
+                                  glm::vec3( 0.0f, 1.0f,  0.0f));
 
-        GLfloat radius = 2.0f;
-        GLfloat camX = 0;
-        GLfloat camZ = radius + 1;
-        GLfloat camY = radius;
-        glm::mat4 view;
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+        depthprogram.StartUseShader();
+            depthprogram.SetUniform("lightSpaceMatrix", lightSpaceMatrix);
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glBindVertexArray(g_vertexArrayObject); GL_CHECK_ERRORS;
+            glm::mat4 model(1);
+            //1 cube
+            model = glm::scale(glm::mat4(1), glm::vec3(0.2f));
+            model = glm::translate(model, cubePositions[0]);
+            depthprogram.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            //2 cube
+            model = glm::scale(glm::mat4(1), glm::vec3(0.2f, 0.35f, 0.7f));
+            model = glm::translate(model, cubePositions[1]);
+            depthprogram.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+            //plane
+            glBindVertexArray(planeVAO);   
+            model = glm::scale(glm::mat4(1), glm::vec3(2.6,2,2));
+            model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            depthprogram.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
+            //tetrahedron
+            glBindVertexArray(tetrahedronVAO); 
+            model = glm::scale(glm::mat4(1), glm::vec3(0.3));
+            model = glm::translate(model, glm::vec3(2 * cos(2 * curtime), 1.2f, 2 * sin(2 * curtime)));
+            depthprogram.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 12);  
+            glBindVertexArray(0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        depthprogram.StopUseShader();
 
-        program.SetUniform("view", view);
+        glViewport(0, 0, WIDTH, HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 projection(1);
-        projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
-        program.SetUniform("projection", projection);
+        if (depthmap == 1) {
+            showDepthprogram.StartUseShader();
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            glBindVertexArray(quadVAO);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            showDepthprogram.SetUniform("depthMap", 0);
+            showDepthprogram.StopUseShader();
+        } else {
+            program.StartUseShader();                           GL_CHECK_ERRORS;
+            program.SetUniform("lightSpaceMatrix", lightSpaceMatrix);
+            program.SetUniform("isTetrahedron", 0);
+            program.SetUniform("lightPos", lightPos);
+            program.SetUniform("viewPos", cameraPos);
+            glBindVertexArray(g_vertexArrayObject); GL_CHECK_ERRORS;
 
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            program.SetUniform("shadowMap", 1);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture1);
+            program.SetUniform("ourTexture1", 0);
+            glm::mat4 model(1);
+            glm::mat4 view;
+            view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+            program.SetUniform("view", view);
+            glm::mat4 projection(1);
+            projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
+            program.SetUniform("projection", projection);
+            //1 cube
+            model = glm::scale(glm::mat4(1), glm::vec3(0.2f));
+            model = glm::translate(model, cubePositions[0]);
+            program.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            //2 cube
+            model = glm::scale(glm::mat4(1), glm::vec3(0.2f, 0.35f, 0.7f));
+            model = glm::translate(model, cubePositions[1]);
+            program.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+            //plane
+            glBindVertexArray(planeVAO);   
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture3);
+            program.SetUniform("ourTexture1", 0);
+            model = glm::scale(glm::mat4(1), glm::vec3(2.6,2,2));
+            model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            program.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
+            //tetrahedron
+            glBindVertexArray(tetrahedronVAO); 
+            program.SetUniform("isTetrahedron", 1);
+            glm::vec3 objectColor = glm::vec3(1.0f, 0.5f, 0.31f);
+            program.SetUniform("objectColor", objectColor);
+            model = glm::scale(glm::mat4(1), glm::vec3(0.3));
+            model = glm::translate(model, glm::vec3(2 * cos(2 * curtime), 1.2f, 2 * sin(2 * curtime)));
+            program.SetUniform("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 12);
+            glBindVertexArray(0);
+            program.StopUseShader();
 
-
-        //1 cube
-        model = glm::scale(glm::mat4(1), glm::vec3(0.2f));
-        model = glm::translate(model, cubePositions[0]);
-
-
-        program.SetUniform("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        
-        //2 cube
-        model = glm::scale(glm::mat4(1), glm::vec3(0.2f, 0.35f, 0.7f));
-        model = glm::translate(model, cubePositions[1]);
-
-
-        program.SetUniform("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        //lightpos
-        model = glm::mat4(1.0);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.2f));
-        program.SetUniform("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        
-
-        glBindVertexArray(0);
-
-        //plane
-
-        glBindVertexArray(planeVAO);
-
-        
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture3);
-        program.SetUniform("ourTexture1", 0);
-        
-
-        model = glm::scale(glm::mat4(1), glm::vec3(2.6,2,2));
-        model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        program.SetUniform("model", model);
-
-        program.SetUniform("view", view);
-
-        projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
-        program.SetUniform("projection", projection);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-
-        //tetrahedron
-        program.SetUniform("isTetrahedron", 1);
-        glm::vec3 objectColor = glm::vec3(1.0f, 0.5f, 0.31f);
-        program.SetUniform("objectColor", objectColor);
-        program.SetUniform("lightColor", lightColor);
-
-
-        glBindVertexArray(tetrahedronVAO);
-        model = glm::scale(glm::mat4(1), glm::vec3(0.3));
-        model = glm::translate(model, glm::vec3(2 * sin(5 * curtime), 1.2f, 2 * cos(2 * curtime)));
-        
-        program.SetUniform("model", model);
-
-
-        program.SetUniform("view", view);
-
-        projection = glm::perspective(glm::radians(45.0f), (float) WIDTH / HEIGHT, 0.1f, 100.0f);
-        program.SetUniform("projection", projection);
-        glDrawArrays(GL_TRIANGLES, 0, 12);
-
-        program.StopUseShader();
+        }
 
 
         glfwSwapBuffers(window); 
