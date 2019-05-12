@@ -10,27 +10,27 @@ set(SOURCE_FILES
     ShaderProgram.h
     ShaderProgram.cpp)
 
+include_directories(glm)
+include_directories(dependencies/include)
+
+
 set(ADDITIONAL_INCLUDE_DIRS
         dependencies/include/GLAD)
 set(ADDITIONAL_LIBRARY_DIRS
-        dependencies/lib)   
+        dependencies/lib)
 set(ADDITIONAL_RUNTIME_LIBRARY_DIRS
-        dependencies/bin)   
+        dependencies/bin)
 
 set (CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG}")
 
 if(WIN32)
-  set(ADDITIONAL_INCLUDE_DIRS 
+  set(ADDITIONAL_INCLUDE_DIRS
         ${ADDITIONAL_INCLUDE_DIRS}
         dependencies/include)
   link_directories(${ADDITIONAL_LIBRARY_DIRS})
 else()
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
-  set(ADDITIONAL_INCLUDE_DIRS 
-        ${ADDITIONAL_INCLUDE_DIRS}
-        dependencies/include)
   find_package(glfw3 REQUIRED)
-  link_directories(${ADDITIONAL_LIBRARY_DIRS})
 endif()
 
 include_directories(${ADDITIONAL_INCLUDE_DIRS})
@@ -48,7 +48,6 @@ if(WIN32)
   target_compile_options(main PRIVATE)
   target_link_libraries(main LINK_PUBLIC ${OPENGL_gl_LIBRARY} glfw3dll)
 else()
-  target_compile_options(main PRIVATE -Wnarrowing)
-  target_link_libraries(main  LINK_PUBLIC SOIL ${OPENGL_gl_LIBRARY} glfw rt dl )
+  target_compile_options(main PRIVATE -Wno-narrowing)
+  target_link_libraries(main LINK_PUBLIC ${OPENGL_gl_LIBRARY} glfw rt dl)
 endif()
-

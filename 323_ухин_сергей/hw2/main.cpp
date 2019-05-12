@@ -6,8 +6,12 @@
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
 #include <random>
-#include "stb_image.h"
 #include "glm/ext.hpp"
+
+
+
+#define STB_IMAGE_IMPLEMENTATION 1
+#include "stb_image.h"
 
 using namespace std;
 glm::vec3 cameraPos   = glm::vec3(0.0f, 1.0f,  3.0f);
